@@ -90,16 +90,15 @@ def create_video(image_files, duplicate_count, fps, audio_path):
     output_filename = "output_video.mp4"
     final_clip.write_videofile(output_filename, codec="libx264", audio_codec="aac")
     return output_filename
-
 # --- 3. STREAMLIT UI LOGIC ---
 
 st.set_page_config(page_title="PragyanAI Video Creator", layout="wide")
 
 # Display logo if it exists
 if os.path.exists("PragyanAI_Transperent.png"):
-    st.image("img.jpg")
+    st.image("PragyanAI_Transperent.png")
 
-st.title("yuki")
+st.title("PragyanAI - Multimedia Merger")
 st.markdown("Upload multiple images, specify timing, and add audio from a file or YouTube.")
 
 with st.sidebar:
@@ -115,8 +114,55 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("1. Images")
-    uploaded_images = st.file_uploader(
-    "Upload Image Sequence",  # Positional argument (label)
-    type=["jpg", "png", "jpeg"],  # Keyword argument
-    accept_multiple_files=True    # Corrected keyword argument
-)
+    uploaded_images = st.file_uploader("Upload Image Sequence", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+    if uploaded_images:
+        st.write(f"✅ {len(uploaded_images)} images uploaded.")
+        st.info(f"Total Duration: {(len(uploaded_images) * duplicates) / fps:.2f} seconds")
+
+with col2:
+    st.subheader("2. Audio")
+    audio_source = st.radio("Source", ["Upload File", "YouTube Link"])
+    
+    if audio_source == "Upload File":
+        uploaded_audio = st.file_uploader("Upload Audio", type=["mp3", "wav"])
+        if uploaded_audio:
+            manual_path = "temp_audio_manual.mp3"
+            with open(manual_path, "wb") as f:
+                f.write(uploaded_audio.getbuffer())
+            st.session_state['audio_path'] = manual_path
+            st.success("Audio File Ready")
+    
+    else:
+        yt_url = st.text_input("Enter YouTube URL")
+        if yt_url:
+            # handle_youtube_download is defined above, so no NameError
+            st.button("Fetch YouTube Audio", 
+                      on_click=handle_youtube_download, 
+                      args=(yt_url,))
+            
+            if 'yt_error' in st.session_state:
+                st.error(f"Download Error: {st.session_state['yt_error']}")
+                st.info("💡 YouTube often blocks cloud servers. Use 'Upload File' as a fallback.")
+
+# Persistent Status Check
+st.write("---")
+if st.session_state.get('audio_path'):
+    st.success(f"🎵 **Audio Status:** Loaded and Ready ({st.session_state['audio_path']})")
+else:
+    st.warning("🎵 **Audio Status:** Not Loaded")
+
+# --- 4. FINAL GENERATION ---
+st.divider()
+if st.button("🚀 Create & Play Video", use_container_width=True):
+    if uploaded_images and st.session_state.get('audio_path'):
+        try:
+            with st.spinner("Rendering video... This may take a minute."):
+                video_file = create_video(uploaded_images, duplicates, fps, st.session_state['audio_path'])
+                st.video(video_file)
+                
+                with open(video_file, "rb") as f:
+                    st.download_button("📥 Download Result", f, file_name="my_video.mp4")
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+    else:
+        st.warning("Please ensure images are uploaded and audio is 'Loaded and Ready'.")
