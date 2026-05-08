@@ -115,4 +115,4 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("1. Images")
-    uploaded_images = st.file_uploader("Upload Image Sequence", type=["jpg", "png", "jpeg"], accept_mul
+    uploaded_images = st.file_uploader("Upload Image Sequence", type=["jpg", "png", "jpeg"], accept_mul)
